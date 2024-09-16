@@ -1,0 +1,226 @@
+---
+title: "Final Project Assignment: Nanci Kopecky"
+author: "Nanci Kopecky"
+description: "Boston 311 Service Requests for 2023"
+date: "05/17/2023"
+format:
+  html:
+    df-print: paged
+    toc: true
+    code-copy: true
+    code-tools: true
+    css: styles.css
+categories:
+  - final_Project_assignment
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| label: setup
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(readr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Introduction
+
+The topic is Boston city services. This project will examine Boston's non-emergency service requests in the data set, *311 Service Requests*. Exploring this data has the potential to offer insight to city planners to be more efficient and better meet citizens' expectations. Boston collects *311 Service Requests* data using technology, a system called Boston 311. The data is posted on the website *Analyze Boston*, data.boston.gov. What is being looked at in this project is how *Boston 311* can benefit the greater good through effective city planning.
+
+## Background
+
+In response to cities facing increasing demands and changing expectations,*Boston 311* was launched in 2015 by Mayor Walsh. It is a system where city employees and residents can submit requests through an app, phone call, or online. *Boston 311* is continuely updated and highly utilized.  Mayor Wu recently announced that requests can now be made in 11 languages. This technology is proven to engage citizens with over 100,000 requests so far for 2023!
+
+## Data Set Introduction
+
+To date, *311 Service Requests* has 104,934 requests, where as, in April there were 79,930. This data is read in with a URL so requests are updated every time the code is run. Each row represents a request; there today there are 104,934 rows. There are 29 columns. Each column contains detailed information about the request that includes the description, time, date, location, the department/domain responsible, and submisstion source. Requests are generally about maintenance, repair, cleaning, and policy.
+
+## Data Set Description
+
+The numerical variables are *case_enquiry_id*, *fire_district* and *police_district*, and *services_district*, but have no numerical meaning because they are identifying/naming information. The character or categorical variables provide information on: case status with *open*, *target*, and *close* dates; descriptions including the *title*, *reason*, and *type*; the department *subject*; location information with the *address*, *fire*, *city council* and *police* districts, and *latitude and longitude coordinates*; and *source* which detial who and how the submission was made.
+
+```{r}
+Boston311 <- read.csv(url("https://data.boston.gov/dataset/8048697b-ad64-4bfc-b090-ee00169f2323/resource/e6013a93-1321-4f2a-bf91-8d8a02f1e62f/download/tmpo8qm0oqd.csv"))
+Bos311 <- as.data.frame.matrix(Boston311)
+head(Bos311)
+dim(Bos311)
+```
+
+```{r}
+#Structure of the Data. 
+str(Bos311)
+```
+
+```{r}
+#How many *reasons*?
+unique(Bos311$reason)
+```
+## Analysis Plan
+
+Questions that can potentially inform city planners on efficiency are: Which departments receive the most requests? Which departments and neighborhoods have the most overdue requests? What is the most common source/what format most requests are made, i.e., phone, app, or other? Diving into this data set can help planners allocate appropriate resources and develop individualized plans for neighborhoods and departments.
+
+Frequency and proportion tables and bar charts will be used to begin to answer these questions. The variables that will be used are *subject* (department), *ontime*, *neighborhood*, and *source*.
+
+## Descriptive Statistics
+
+**Frequencies** and **percentages** will summarize the categorical data, *subject* (department), *ontime*, *neighborhood*, and *source*.
+
+```{r}
+#Requests by Department
+By_Department <- table(Bos311$subject)
+cbind(By_Department, prop.table(By_Department)*100)
+```
+
+```{r}
+#On-Time and Overdue Requests 
+By_Completion_Status <- table(Bos311$ontime)
+cbind(By_Completion_Status, prop.table(By_Completion_Status)*100)
+```
+
+```{r}
+# Tidy Data
+## Removing the rows with missing values and outliers for neighborhood and source. Chestnut Hill and Maximo Integration are outliers with only 1 submitted request each. 
+Bos311_Neighbor <- Bos311[!(is.na(Bos311$neighborhood) | Bos311$neighborhood==" "| Bos311$neighborhood=="" | Bos311$neighborhood=="Chestnut Hill" | Bos311$source=="Maximo Integration"), ]
+unique(Bos311_Neighbor$neighborhood)
+unique(Bos311_Neighbor$source)
+```
+
+```{r}
+#Request by Neighborhood 
+By_Neighborhood <- table(Bos311_Neighbor$neighborhood)
+cbind(By_Neighborhood, prop.table(By_Neighborhood)*100)
+```
+
+```{r}
+#Requests by Source
+By_Source <- table(Bos311_Neighbor$source)
+cbind(By_Source, prop.table(By_Source)*100)
+```
+## Results and Analysis
+
+```{r}
+# Which department recieves the most requests?
+ggplot(Bos311, aes(subject)) + 
+  geom_bar(fill ="#33CCFF")+
+  labs(title = "Requests by Department", x = "Department", y = "Frequency") +
+  coord_flip()
+```
+
+```{r}
+#Which departments have more overdue requests?
+ggplot(Bos311, aes(subject)) + 
+  geom_bar(aes(fill=ontime), position = "fill") +
+  labs(title = "On Time and Overdue Requests by Department", x = "Department", y = "Percent") +
+  coord_flip()
+table(Bos311$subject,Bos311$ontime)
+```
+
+```{r}
+#Which neighborhoods have more overdue requests?
+ggplot(Bos311_Neighbor, aes(neighborhood)) + 
+  geom_bar(aes(fill=ontime), position = "fill") +
+  labs(title = "On Time and Overdue Requests by Neighborhood", x = "Neighborhood", y = "Percent") +
+  coord_flip()
+table(Bos311_Neighbor$neighborhood,Bos311_Neighbor$ontime)
+prop.table(table(Bos311_Neighbor$neighborhood,Bos311_Neighbor$ontime))
+```
+
+```{r}
+#Are *neighborhood* and *ontime* independent?  
+table(Bos311_Neighbor$neighborhood, Bos311_Neighbor$ontime)
+chisq.test(table(Bos311_Neighbor$neighborhood, Bos311_Neighbor$ontime))
+```
+```{r}
+# What is the most common source?
+ggplot(Bos311_Neighbor, aes(source)) + 
+  geom_bar(fill ="#33CCFF")+
+  labs(title = "Source of Requests", x = "Source", y = "Frequency") +
+  coord_flip()
+```
+
+```{r}
+#Are *ontime* and *source* independent? A few visualizations are presented here to discuss which could best answer this question.
+ggplot(Bos311_Neighbor, aes(source)) + 
+  geom_bar(aes(fill=ontime), position = "fill") +
+  labs(title = "On Time by Source", x = "Source", y = "Percent") +
+  coord_flip()
+
+ggplot(Bos311_Neighbor, aes(ontime)) + 
+  geom_bar(aes(fill=source), position = "fill") +
+  labs(title = "Source Distribution for On Time and Overdue", x = "Completion Status", y = "Percent") +
+  coord_flip()
+
+ggplot(Bos311_Neighbor, aes(ontime)) + 
+  geom_bar(aes(fill=source), position = position_dodge()) +
+  labs(title = "Source Distribution for On Time and Overdue", x = "Neighborhood", y = "Percent") +
+  coord_flip()
+
+prop.table(table(Bos311_Neighbor$source,Bos311_Neighbor$ontime))
+```
+
+```{r}
+#Are *ontime* requests and *source* independent? A chi-square test concludes no, that these variables are associated.
+table(Bos311_Neighbor$ontime, Bos311_Neighbor$source)
+chisq.test(table(Bos311_Neighbor$ontime, Bos311_Neighbor$source))
+```
+
+```{r}
+# How are requests submitted in each neighborhood?
+ggplot(Bos311_Neighbor, aes(neighborhood)) +
+  geom_bar(aes(fill = source), position = "fill") +
+  labs(title = "311 Service Requests for 2023", x = "Neighborhood", y = "Percent") + 
+  coord_flip()
+table(Bos311_Neighbor$neighborhood, Bos311_Neighbor$source)
+```
+
+```{r}
+# How are requests submitted for each department? Again, a few graphs are presented for discussion to see which better represents the question. 
+ggplot(Bos311, aes(subject)) +
+  geom_bar(aes(fill = source), position = position_dodge())+
+  labs(title = "Source of Requests per Department", x = "Department", y = "Frequency") + 
+  coord_flip()
+
+ggplot(Bos311_Neighbor, aes(subject)) +
+  geom_bar(aes(fill = source), position = "fill")+
+  labs(title = "Source of Requests per Department", x = "Department", y = "Percent") + 
+  coord_flip()
+```
+
+# Conclusion and Discussion
+
+I have a whole new appreciation for city management after sorting 100,000 plus non-emergency service requests. Tables and bar graphs show that Public Works receives the most requests, more than all the other departments combined. And that the Citizen Connect App is most frequent way requests are submitted.  There are infinite ways to dive into the details of this data set.  For instance, while Citizens Connect App is the most used way overall to report requests, constituent calls account for majority of requests for the Public Works department and the only way for the Water and Sewer, Police, and Animal Control.  And knowing information like this can help planners enhance communication between the city and its residents.  
+
+Being perceptive about things like which departments and neighborhoods have more overdue requests can provide direction on improving services.  For example, looking at additional variables like *reason* and *type* might shed light on why some areas have more overdue requests than others.  
+
+The chi-square test for independence for the variables *ontime* and *neighborhood* and for *ontime* and *source*. The conclusions for both tests are that these variables are associated, that they are not independent.  What does that tell us?  Possibly that for a service request to be completed on time might be dependent on which department or neighborhood.  Is it reasonable to expect *ontime* to be independent of *subject* (department) and *neighborhood*?  In theory, yes, but in reality, leads to more questions.  What else can be contributing to these dependencies? Further study can lead to solutions so that departments have necessary resources and neighborhoods are attended to equally.  Additional questions might be...
+
+```{r}
+# What are the *reasons* for each *neighborhood*?
+ggplot(Bos311_Neighbor, aes(neighborhood)) + 
+  geom_bar(aes(fill=reason), position = "fill") +
+  labs(title = "Reason for Requests by Neighborhood", x = "Neighborhood", y = "Percent") +
+  coord_flip()
+# What *reasons* are more likely to be *ontime*?
+ggplot(Bos311_Neighbor, aes(ontime)) + 
+  geom_bar(aes(fill=reason), position = position_dodge()) +
+  labs(title = "Reason by Completion", x = "Request Completion", y = "Percent") +
+  coord_flip()
+```
+
+# Bibliography
+
+Center for Public Impact (2016, April 4) "Accessing Boston's non-emergency services via Bos:311"    URL https://www.centreforpublicimpact.org/case-study/updating-311-us-municipal-services
+
+City Wide Analytics Team (2023, May 15) "Analyze Boston" URL https://data.boston.gov/
+
+City Wide Analytics Team (2023, May 15) "311 Service-2023" URL
+  https://data.boston.gov/dataset/8048697b-ad64-4bfc-b090-ee00169f2323/resource/e6013a93-1321-4f2   a-bf91-8d8a02f1e62f/download/tmp7tg4exd3.csv
+
+Posit team (2022). RStudio: Integrated Development Environment for R. Posit Software, PBC,         Boston, MA. URL http://www.posit.co/.
+
+R Core Team (2022). R: A language and environment for statistical computing. R Foundation for        Statistical Computing, Vienna, Austria. URL  https://www.R-project.org/.
